@@ -50,6 +50,18 @@ export default function DMTrackingPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    if (!showAdd) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-creator-search]')) {
+        setShowCreatorDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showAdd]);
+
   const selectedCreator = useMemo(() => creators.find(c => c.id === form.creator_id), [creators, form.creator_id]);
   const selectedTemplate = useMemo(() => templates.find(t => t.id === form.template_id), [templates, form.template_id]);
 
@@ -225,16 +237,16 @@ export default function DMTrackingPage() {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>{editMsg ? 'Edit DM' : 'New DM'}</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ position: 'relative' }}>
-                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Search Instagram Creator</label>
+              <div data-creator-search>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Instagram Creator</label>
                 <input
                   placeholder="Search by name or instagram id..."
                   value={creatorSearch}
-                  onChange={e => { setCreatorSearch(e.target.value); setShowCreatorDropdown(true); setForm(f => ({ ...f, creator_id: '' })); }}
+                  onChange={e => { setCreatorSearch(e.target.value); setForm(f => ({ ...f, creator_id: '' })); }}
                   onFocus={() => setShowCreatorDropdown(true)}
                 />
-                {showCreatorDropdown && creatorSearch && !form.creator_id && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', maxHeight: '200px', overflow: 'auto', zIndex: 10, marginTop: '4px' }}>
+                {showCreatorDropdown && !form.creator_id && (
+                  <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '8px', maxHeight: '180px', overflow: 'auto', marginTop: '4px' }}>
                     {filteredCreators.length === 0 ? (
                       <div style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--text-muted)' }}>No creators found</div>
                     ) : (
@@ -243,11 +255,11 @@ export default function DMTrackingPage() {
                           key={c.id}
                           onClick={() => selectCreator(c)}
                           style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: '13px' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-input)')}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-card)')}
                           onMouseLeave={e => (e.currentTarget.style.background = '')}
                         >
                           <div style={{ fontWeight: '600' }}>{c.instagram_id}</div>
-                          {c.name && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{c.name}</div>}
+                          {c.name && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{c.name} · {c.followers.toLocaleString()} followers</div>}
                         </div>
                       ))
                     )}

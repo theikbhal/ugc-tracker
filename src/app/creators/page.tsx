@@ -306,6 +306,7 @@ export default function CreatorsPage() {
                   <td>
                     <div style={{ display: 'flex', gap: '4px' }}>
                       <a href={`/creators/${c.id}`} target="_blank" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>View</a>
+                      <a href={`/dm-tracking?creator_id=${c.id}`} target="_blank" className="btn-primary btn-sm" style={{ textDecoration: 'none' }}>DM</a>
                       <button className="btn-secondary btn-sm" onClick={() => openEdit(c)}>Edit</button>
                       <button className="btn-danger btn-sm" onClick={() => handleDelete(c.id)}>Del</button>
                     </div>

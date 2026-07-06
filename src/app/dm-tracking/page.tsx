@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DMMessage, UGCCreator, DMTemplate } from '@/lib/types';
 import { getDMMessages, createDMMessage, updateDMMessage, deleteDMMessage, getCreators, getDMTemplates } from '@/lib/storage';
 import { exportToJSON, exportToCSV } from '@/lib/export';
@@ -15,7 +16,7 @@ function replacePlaceholders(template: string, creator: UGCCreator): string {
     .replace(/\{\{instagram_link\}\}/g, creator.instagram_link || '');
 }
 
-export default function DMTrackingPage() {
+function DMTrackingContent() {
   const [messages, setMessages] = useState<DMMessage[]>([]);
   const [creators, setCreators] = useState<UGCCreator[]>([]);
   const [templates, setTemplates] = useState<DMTemplate[]>([]);
@@ -52,6 +53,19 @@ export default function DMTrackingPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const cid = searchParams.get('creator_id');
+    if (cid && creators.length > 0) {
+      const creator = creators.find(c => c.id === cid);
+      if (creator) {
+        setForm(f => ({ ...f, creator_id: cid }));
+        setCreatorSearch(creator.name || creator.instagram_id);
+        setShowAdd(true);
+      }
+    }
+  }, [searchParams, creators]);
 
   useEffect(() => {
     if (!showAdd) return;
@@ -458,5 +472,13 @@ export default function DMTrackingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function DMTrackingPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>}>
+      <DMTrackingContent />
+    </Suspense>
   );
 }

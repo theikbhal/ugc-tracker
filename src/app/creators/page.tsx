@@ -322,8 +322,8 @@ export default function CreatorsPage() {
         <div className="modal-overlay" onClick={() => setShowBulkAdd(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Bulk Add Creators</h2>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>One per line — instagram handle, @handle, or full URL. Links auto-generated.</p>
-            <textarea rows={8} placeholder="earlyalarm&#10;@somecreator&#10;https://www.instagram.com/anothercreator/" value={bulkText} onChange={e => setBulkText(e.target.value)} />
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Paste one Instagram link per line. ID auto-extracted, link auto-generated.</p>
+            <textarea rows={8} placeholder="https://www.instagram.com/wakeupcallie/&#10;https://www.instagram.com/earlyalarm/&#10;https://www.instagram.com/creator3/" value={bulkText} onChange={e => setBulkText(e.target.value)} />
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
               <button className="btn-secondary" onClick={() => setShowBulkAdd(false)}>Cancel</button>
               <button className="btn-primary" onClick={handleBulkAdd}>Add All</button>

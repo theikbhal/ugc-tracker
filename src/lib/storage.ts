@@ -239,6 +239,58 @@ export async function bulkAddAppToCreators(creatorIds: string[], appName: string
   }
 }
 
+// ============ RELATED CREATORS ============
+
+export async function linkRelatedCreators(creatorId: string, relatedIds: string[]): Promise<void> {
+  if (isSupabaseEnabled()) {
+    const client = getSupabaseClient();
+    if (client) {
+      const { data: creator } = await client.from('creators').select('related_creators').eq('id', creatorId).single();
+      if (creator) {
+        const existing = creator.related_creators || [];
+        const merged = [...new Set([...existing, ...relatedIds])];
+        await client.from('creators').update({ related_creators: merged, updated_at: new Date().toISOString() }).eq('id', creatorId);
+      }
+      return;
+    }
+  }
+  if (isLocalStorageEnabled()) {
+    const creators = await getCreators();
+    const updated = creators.map(c => {
+      if (c.id === creatorId) {
+        const merged = [...new Set([...c.related_creators, ...relatedIds])];
+        return { ...c, related_creators: merged, updated_at: new Date().toISOString() };
+      }
+      return c;
+    });
+    localStorage.setItem('ugc_creators', JSON.stringify(updated));
+  }
+}
+
+export async function unlinkRelatedCreator(creatorId: string, relatedId: string): Promise<void> {
+  if (isSupabaseEnabled()) {
+    const client = getSupabaseClient();
+    if (client) {
+      const { data: creator } = await client.from('creators').select('related_creators').eq('id', creatorId).single();
+      if (creator) {
+        const filtered = (creator.related_creators || []).filter((id: string) => id !== relatedId);
+        await client.from('creators').update({ related_creators: filtered, updated_at: new Date().toISOString() }).eq('id', creatorId);
+      }
+      return;
+    }
+  }
+  if (isLocalStorageEnabled()) {
+    const creators = await getCreators();
+    const updated = creators.map(c => {
+      if (c.id === creatorId) {
+        return { ...c, related_creators: c.related_creators.filter(id => id !== relatedId), updated_at: new Date().toISOString() };
+      }
+      return c;
+    });
+    localStorage.setItem('ugc_creators', JSON.stringify(updated));
+  }
+}
+
 // ============ DM TEMPLATES ============
 
 export async function getDMTemplates(): Promise<DMTemplate[]> {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { UGCCreator, STATUS_OPTIONS, App } from '@/lib/types';
-import { getCreators, createCreator, updateCreator, deleteCreator, bulkAddCreators, bulkAddNotesSuffix, bulkAddAppToCreators, getApps } from '@/lib/storage';
+import { getCreators, createCreator, updateCreator, deleteCreator, bulkAddCreators, bulkAddNotesSuffix, bulkAddAppToCreators, getApps, linkRelatedCreators, unlinkRelatedCreator } from '@/lib/storage';
 import { exportToJSON, exportToCSV } from '@/lib/export';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -38,6 +38,9 @@ export default function CreatorsPage() {
   const [bulkText, setBulkText] = useState('');
   const [bulkNotesSuffix, setBulkNotesSuffix] = useState('');
   const [bulkAppName, setBulkAppName] = useState('');
+  const [relatedPasteText, setRelatedPasteText] = useState('');
+  const [relatedResults, setRelatedResults] = useState<{ line: string; extractedId: string; matchedCreator: UGCCreator | null; matchType: string }[]>([]);
+  const [linkedCreatorIds, setLinkedCreatorIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -139,7 +142,72 @@ export default function CreatorsPage() {
       posts: c.posts,
     });
     setEditCreator(c);
+    setRelatedPasteText('');
+    setRelatedResults([]);
+    setLinkedCreatorIds(new Set());
     setShowAdd(true);
+  };
+
+  const extractId = (line: string): { id: string; name: string } => {
+    const trimmed = line.trim();
+    const urlMatch = trimmed.match(/instagram\.com\/([a-zA-Z0-9._]+)\/?/);
+    if (urlMatch) return { id: urlMatch[1], name: '' };
+    if (trimmed.startsWith('@')) return { id: trimmed.slice(1), name: '' };
+    const parts = trimmed.split('|').map(s => s.trim());
+    if (parts.length >= 2) {
+      const possibleId = parts[0].replace(/[^a-zA-Z0-9._]/g, '');
+      if (possibleId && /^[a-zA-Z0-9._]+$/.test(possibleId) && possibleId.length < 40) {
+        return { id: possibleId, name: parts[1] };
+      }
+      return { id: '', name: trimmed };
+    }
+    if (/^[a-zA-Z0-9._]+$/.test(trimmed) && trimmed.length < 40) {
+      return { id: trimmed, name: '' };
+    }
+    return { id: '', name: trimmed };
+  };
+
+  const handleFindRelated = () => {
+    if (!editCreator || !relatedPasteText.trim()) return;
+    const lines = relatedPasteText.split('\n').filter(l => l.trim());
+    const results = lines.map(line => {
+      const { id, name } = extractId(line);
+      let found: UGCCreator | null = null;
+      let matchType = '';
+
+      if (id) {
+        found = creators.find(c => c.id !== editCreator!.id && c.instagram_id.toLowerCase() === id.toLowerCase()) || null;
+        if (found) matchType = 'instagram_id';
+      }
+      if (!found && name) {
+        found = creators.find(c => c.id !== editCreator!.id && c.name.toLowerCase().includes(name.toLowerCase())) || null;
+        if (found) matchType = 'name';
+      }
+      if (!found && !id && !name) {
+        const q = line.toLowerCase();
+        found = creators.find(c => c.id !== editCreator!.id && (c.notes.toLowerCase().includes(q) || c.instagram_id.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))) || null;
+        if (found) matchType = 'notes';
+      }
+
+      return { line: line.trim(), extractedId: id, matchedCreator: found, matchType };
+    });
+    setRelatedResults(results);
+  };
+
+  const handleLinkRelated = async (creator: UGCCreator) => {
+    if (!editCreator) return;
+    await linkRelatedCreators(editCreator.id, [creator.id]);
+    await linkRelatedCreators(creator.id, [editCreator.id]);
+    setLinkedCreatorIds(prev => new Set(prev).add(creator.id));
+    load();
+  };
+
+  const handleUnlinkRelated = async (creator: UGCCreator) => {
+    if (!editCreator) return;
+    await unlinkRelatedCreator(editCreator.id, creator.id);
+    await unlinkRelatedCreator(creator.id, editCreator.id);
+    setLinkedCreatorIds(prev => { const next = new Set(prev); next.delete(creator.id); return next; });
+    load();
   };
 
   const toggleSelect = (id: string) => {
@@ -321,6 +389,71 @@ export default function CreatorsPage() {
                 <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Notes</label>
                 <textarea rows={3} placeholder="Notes about this creator..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
               </div>
+
+              {editCreator && (
+                <div style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>Find Related Creators</div>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Paste following/follower list — matches against your other UGC creators.</p>
+                  <textarea
+                    rows={5}
+                    placeholder={`alyssawakingup\nbrooke.wakeup\nBrookelyn☕️\nanniewakesup\nAnnie\nwake.up.rosie\nWake up Rosie`}
+                    value={relatedPasteText}
+                    onChange={e => setRelatedPasteText(e.target.value)}
+                    style={{ fontSize: '12px' }}
+                  />
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '6px' }}>
+                    <button className="btn-primary btn-sm" disabled={!relatedPasteText.trim()} onClick={handleFindRelated}>Find Matches</button>
+                  </div>
+
+                  {relatedResults.length > 0 && (
+                    <div style={{ marginTop: '10px' }}>
+                      {relatedResults.filter(r => r.matchedCreator).map((r, i) => {
+                        const isLinked = linkedCreatorIds.has(r.matchedCreator!.id) || editCreator.related_creators.includes(r.matchedCreator!.id);
+                        return (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: isLinked ? 'var(--pastel-blue)' : 'var(--pastel-green)', borderRadius: '6px', marginBottom: '4px', fontSize: '12px' }}>
+                            <div>
+                              <span style={{ fontWeight: '600' }}>{r.matchedCreator!.instagram_id}</span>
+                              {r.matchedCreator!.name && <span style={{ color: 'var(--text-muted)', marginLeft: '4px' }}>{r.matchedCreator!.name}</span>}
+                              <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: '4px' }}>({r.matchType})</span>
+                            </div>
+                            {isLinked ? (
+                              <button className="btn-secondary btn-sm" onClick={() => handleUnlinkRelated(r.matchedCreator!)}>Unlink</button>
+                            ) : (
+                              <button className="btn-primary btn-sm" onClick={() => handleLinkRelated(r.matchedCreator!)}>Link</button>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {relatedResults.filter(r => !r.matchedCreator).length > 0 && (
+                        <div style={{ marginTop: '6px' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Not found ({relatedResults.filter(r => !r.matchedCreator).length}):</div>
+                          {relatedResults.filter(r => !r.matchedCreator).map((r, i) => (
+                            <div key={i} style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '2px 6px' }}>· {r.extractedId || r.line}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {editCreator.related_creators.length > 0 && (
+                    <div style={{ marginTop: '10px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '4px' }}>Currently linked:</div>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        {editCreator.related_creators.map(rid => {
+                          const rc = creators.find(c => c.id === rid);
+                          return rc ? (
+                            <span key={rid} className="badge" style={{ background: 'var(--pastel-purple)', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              {rc.instagram_id}
+                              <span style={{ cursor: 'pointer', fontWeight: '700' }} onClick={() => handleUnlinkRelated(rc)}>×</span>
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                 <button className="btn-secondary" onClick={() => { setShowAdd(false); setEditCreator(null); }}>Cancel</button>
                 <button className="btn-primary" onClick={handleSave}>{editCreator ? 'Update' : 'Add'}</button>

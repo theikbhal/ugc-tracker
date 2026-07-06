@@ -305,6 +305,7 @@ export default function CreatorsPage() {
                   <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px', color: 'var(--text-muted)' }}>{c.notes || '—'}</td>
                   <td>
                     <div style={{ display: 'flex', gap: '4px' }}>
+                      <a href={`/creators/${c.id}`} target="_blank" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>View</a>
                       <button className="btn-secondary btn-sm" onClick={() => openEdit(c)}>Edit</button>
                       <button className="btn-danger btn-sm" onClick={() => handleDelete(c.id)}>Del</button>
                     </div>

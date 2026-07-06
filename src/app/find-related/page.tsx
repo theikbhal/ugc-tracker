@@ -118,8 +118,8 @@ export default function FindRelatedPage() {
     <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
       <div style={{ marginBottom: '16px' }}>
         <a href="/" style={{ color: 'var(--text-muted)', fontSize: '12px', textDecoration: 'none' }}>← Back</a>
-        <h1 style={{ fontSize: '20px', fontWeight: '700' }}>Find Related Creators</h1>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Paste following/follower list — match against your UGC creators and link them.</p>
+        <h1 style={{ fontSize: '20px', fontWeight: '700' }}>Followers / Following Creators</h1>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Paste Instagram following/follower list — match against your UGC creators and link them.</p>
       </div>
 
       <div className="card" style={{ marginBottom: '16px' }}>

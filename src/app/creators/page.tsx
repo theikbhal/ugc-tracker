@@ -392,8 +392,8 @@ export default function CreatorsPage() {
 
               {editCreator && (
                 <div style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>Find Related Creators</div>
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Paste following/follower list — matches against your other UGC creators.</p>
+                  <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>Followers / Following Creators</div>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Paste their Instagram following list — find and link UGC creators they follow.</p>
                   <textarea
                     rows={5}
                     placeholder={`alyssawakingup\nbrooke.wakeup\nBrookelyn☕️\nanniewakesup\nAnnie\nwake.up.rosie\nWake up Rosie`}

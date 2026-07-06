@@ -206,6 +206,39 @@ export async function bulkAddNotesSuffix(creatorIds: string[], suffix: string): 
   }
 }
 
+export async function bulkAddAppToCreators(creatorIds: string[], appName: string): Promise<void> {
+  if (isSupabaseEnabled()) {
+    const client = getSupabaseClient();
+    if (client) {
+      for (const id of creatorIds) {
+        const creator = await getCreator(id);
+        if (creator && !creator.apps.includes(appName)) {
+          await client.from('creators').update({
+            apps: [...creator.apps, appName],
+            updated_at: new Date().toISOString(),
+          }).eq('id', id);
+        }
+      }
+      return;
+    }
+  }
+
+  if (isLocalStorageEnabled()) {
+    const creators = await getCreators();
+    const updated = creators.map(c => {
+      if (creatorIds.includes(c.id) && !c.apps.includes(appName)) {
+        return {
+          ...c,
+          apps: [...c.apps, appName],
+          updated_at: new Date().toISOString(),
+        };
+      }
+      return c;
+    });
+    localStorage.setItem('ugc_creators', JSON.stringify(updated));
+  }
+}
+
 // ============ DM MESSAGES ============
 
 export async function getDMMessages(creatorId?: string): Promise<DMMessage[]> {

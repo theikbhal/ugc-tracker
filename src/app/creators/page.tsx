@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { UGCCreator, STATUS_OPTIONS, App } from '@/lib/types';
-import { getCreators, createCreator, updateCreator, deleteCreator, bulkAddCreators, bulkAddNotesSuffix, getApps } from '@/lib/storage';
+import { getCreators, createCreator, updateCreator, deleteCreator, bulkAddCreators, bulkAddNotesSuffix, bulkAddAppToCreators, getApps } from '@/lib/storage';
 import { exportToJSON, exportToCSV } from '@/lib/export';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -18,6 +18,7 @@ export default function CreatorsPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [showBulkNotes, setShowBulkNotes] = useState(false);
+  const [showBulkApp, setShowBulkApp] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editCreator, setEditCreator] = useState<UGCCreator | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,6 +37,7 @@ export default function CreatorsPage() {
 
   const [bulkText, setBulkText] = useState('');
   const [bulkNotesSuffix, setBulkNotesSuffix] = useState('');
+  const [bulkAppName, setBulkAppName] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -111,6 +113,15 @@ export default function CreatorsPage() {
     load();
   };
 
+  const handleBulkApp = async () => {
+    if (selectedIds.length === 0 || !bulkAppName) return;
+    await bulkAddAppToCreators(selectedIds, bulkAppName);
+    setBulkAppName('');
+    setSelectedIds([]);
+    setShowBulkApp(false);
+    load();
+  };
+
   const resetForm = () => {
     setForm({ instagram_id: '', instagram_link: '', name: '', notes: '', apps: [], status: 'new', followers: 0, following: 0, posts: 0 });
   };
@@ -159,6 +170,7 @@ export default function CreatorsPage() {
           <button className="btn-primary btn-sm" onClick={() => { resetForm(); setEditCreator(null); setShowAdd(true); }}>+ Add</button>
           <button className="btn-secondary btn-sm" onClick={() => setShowBulkAdd(true)}>Bulk Add</button>
           {selectedIds.length > 0 && <button className="btn-secondary btn-sm" onClick={() => setShowBulkNotes(true)}>Bulk Notes ({selectedIds.length})</button>}
+          {selectedIds.length > 0 && <button className="btn-secondary btn-sm" onClick={() => setShowBulkApp(true)}>Add App ({selectedIds.length})</button>}
           <button className="btn-secondary btn-sm" onClick={() => exportToJSON(filtered, 'creators')}>JSON</button>
           <button className="btn-secondary btn-sm" onClick={() => exportToCSV(filtered, 'creators')}>CSV</button>
         </div>
@@ -340,6 +352,32 @@ export default function CreatorsPage() {
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
               <button className="btn-secondary" onClick={() => setShowBulkNotes(false)}>Cancel</button>
               <button className="btn-primary" onClick={handleBulkNotes}>Add Notes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkApp && (
+        <div className="modal-overlay" onClick={() => setShowBulkApp(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Add App to {selectedIds.length} Creators</h2>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Select an app to add to all selected creators (skips if already added).</p>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              {apps.map(a => (
+                <button
+                  key={a.id}
+                  type="button"
+                  className={`btn-sm ${bulkAppName === a.name ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setBulkAppName(a.name)}
+                >
+                  {a.name}
+                </button>
+              ))}
+            </div>
+            <input placeholder="Or type app name..." value={bulkAppName} onChange={e => setBulkAppName(e.target.value)} />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
+              <button className="btn-secondary" onClick={() => setShowBulkApp(false)}>Cancel</button>
+              <button className="btn-primary" disabled={!bulkAppName} onClick={handleBulkApp}>Add App</button>
             </div>
           </div>
         </div>

@@ -353,22 +353,41 @@ export default function CreatorsPage() {
               </div>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Apps</label>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {apps.map(a => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      className={`btn-sm ${form.apps.includes(a.name) ? 'btn-primary' : 'btn-secondary'}`}
-                      onClick={() => {
-                        setForm(f => ({
-                          ...f,
-                          apps: f.apps.includes(a.name) ? f.apps.filter(x => x !== a.name) : [...f.apps, a.name]
-                        }));
-                      }}
-                    >
-                      {a.name}
-                    </button>
-                  ))}
+                {form.apps.length > 0 && (
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    {form.apps.map(a => (
+                      <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: 'var(--accent)', color: 'white', borderRadius: '6px', fontSize: '12px', fontWeight: '500' }}>
+                        {a}
+                        <span style={{ cursor: 'pointer', fontWeight: '700', opacity: 0.8 }} onClick={() => setForm(f => ({ ...f, apps: f.apps.filter(x => x !== a) }))}>×</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <select
+                    value=""
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (v && !form.apps.includes(v)) setForm(f => ({ ...f, apps: [...f.apps, v] }));
+                    }}
+                    style={{ flex: 1 }}
+                  >
+                    <option value="">Select app to add...</option>
+                    {apps.filter(a => !form.apps.includes(a.name)).map(a => (
+                      <option key={a.id} value={a.name}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                  <input placeholder="Or type new app name..." id="newAppInput" style={{ flex: 1 }} />
+                  <button className="btn-secondary btn-sm" onClick={() => {
+                    const input = document.getElementById('newAppInput') as HTMLInputElement;
+                    const v = input?.value?.trim();
+                    if (v && !form.apps.includes(v)) {
+                      setForm(f => ({ ...f, apps: [...f.apps, v] }));
+                      input.value = '';
+                    }
+                  }}>Add</button>
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>

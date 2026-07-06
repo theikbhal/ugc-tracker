@@ -24,6 +24,7 @@ export default function DMTrackingPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [editMsg, setEditMsg] = useState<DMMessage | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     creator_id: '',
@@ -34,6 +35,9 @@ export default function DMTrackingPage() {
     response_text: '',
     status: 'sent' as DMMessage['status'],
   });
+
+  const [creatorSearch, setCreatorSearch] = useState('');
+  const [showCreatorDropdown, setShowCreatorDropdown] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,6 +52,16 @@ export default function DMTrackingPage() {
 
   const selectedCreator = useMemo(() => creators.find(c => c.id === form.creator_id), [creators, form.creator_id]);
   const selectedTemplate = useMemo(() => templates.find(t => t.id === form.template_id), [templates, form.template_id]);
+
+  const filteredCreators = useMemo(() => {
+    if (!creatorSearch.trim()) return creators.slice(0, 20);
+    const q = creatorSearch.toLowerCase();
+    return creators.filter(c =>
+      c.instagram_id.toLowerCase().includes(q) ||
+      c.name.toLowerCase().includes(q) ||
+      c.instagram_link.toLowerCase().includes(q)
+    ).slice(0, 20);
+  }, [creators, creatorSearch]);
 
   const previewMessage = useMemo(() => {
     if (!selectedCreator || !selectedTemplate) return form.message;
@@ -93,9 +107,12 @@ export default function DMTrackingPage() {
 
   const resetForm = () => {
     setForm({ creator_id: '', template_id: '', message: '', sent_at: new Date().toISOString().slice(0, 16), responded: false, response_text: '', status: 'sent' });
+    setCreatorSearch('');
+    setShowCreatorDropdown(false);
   };
 
   const openEdit = (m: DMMessage) => {
+    const creator = creators.find(c => c.id === m.creator_id);
     setForm({
       creator_id: m.creator_id,
       template_id: '',
@@ -105,13 +122,26 @@ export default function DMTrackingPage() {
       response_text: m.response_text || '',
       status: m.status,
     });
+    setCreatorSearch(creator ? (creator.name || creator.instagram_id) : '');
     setEditMsg(m);
     setShowAdd(true);
+  };
+
+  const selectCreator = (c: UGCCreator) => {
+    setForm(f => ({ ...f, creator_id: c.id }));
+    setCreatorSearch(c.name || c.instagram_id);
+    setShowCreatorDropdown(false);
   };
 
   const getCreatorName = (id: string) => {
     const c = creators.find(cr => cr.id === id);
     return c ? (c.name || c.instagram_id || id.slice(0, 8)) : id.slice(0, 8);
+  };
+
+  const copyMessage = async (text: string, id: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
   };
 
   const statusColors: Record<string, string> = {
@@ -178,6 +208,9 @@ export default function DMTrackingPage() {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                  <button className="btn-secondary btn-sm" onClick={() => copyMessage(m.message, m.id)}>
+                    {copiedId === m.id ? 'Copied!' : 'Copy'}
+                  </button>
                   <button className="btn-secondary btn-sm" onClick={() => openEdit(m)}>Edit</button>
                   <button className="btn-danger btn-sm" onClick={() => handleDelete(m.id)}>Del</button>
                 </div>
@@ -192,13 +225,55 @@ export default function DMTrackingPage() {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>{editMsg ? 'Edit DM' : 'New DM'}</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Creator</label>
-                <select value={form.creator_id} onChange={e => setForm(f => ({ ...f, creator_id: e.target.value }))}>
-                  <option value="">Select creator...</option>
-                  {creators.map(c => <option key={c.id} value={c.id}>{c.name || c.instagram_id}</option>)}
-                </select>
+              <div style={{ position: 'relative' }}>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Search Instagram Creator</label>
+                <input
+                  placeholder="Search by name or instagram id..."
+                  value={creatorSearch}
+                  onChange={e => { setCreatorSearch(e.target.value); setShowCreatorDropdown(true); setForm(f => ({ ...f, creator_id: '' })); }}
+                  onFocus={() => setShowCreatorDropdown(true)}
+                />
+                {showCreatorDropdown && creatorSearch && !form.creator_id && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', maxHeight: '200px', overflow: 'auto', zIndex: 10, marginTop: '4px' }}>
+                    {filteredCreators.length === 0 ? (
+                      <div style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--text-muted)' }}>No creators found</div>
+                    ) : (
+                      filteredCreators.map(c => (
+                        <div
+                          key={c.id}
+                          onClick={() => selectCreator(c)}
+                          style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: '13px' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-input)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = '')}
+                        >
+                          <div style={{ fontWeight: '600' }}>{c.instagram_id}</div>
+                          {c.name && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{c.name}</div>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
+
+              {selectedCreator && (
+                <div style={{ padding: '10px', background: 'var(--pastel-purple)', borderRadius: '8px', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontWeight: '600' }}>{selectedCreator.instagram_id}</span>
+                      {selectedCreator.name && <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>{selectedCreator.name}</span>}
+                    </div>
+                    <button className="btn-secondary btn-sm" onClick={() => { setForm(f => ({ ...f, creator_id: '' })); setCreatorSearch(''); }}>Change</button>
+                  </div>
+                  <div style={{ marginTop: '4px', color: 'var(--text-muted)' }}>
+                    {selectedCreator.followers.toLocaleString()} followers · {selectedCreator.posts.toLocaleString()} posts · {selectedCreator.following.toLocaleString()} following
+                  </div>
+                  {selectedCreator.apps.length > 0 && (
+                    <div style={{ marginTop: '4px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      {selectedCreator.apps.map(a => <span key={a} className="badge" style={{ background: 'var(--pastel-blue)', fontSize: '11px' }}>{a}</span>)}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Use Template (optional)</label>
@@ -253,7 +328,7 @@ export default function DMTrackingPage() {
 
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                 <button className="btn-secondary" onClick={() => { setShowAdd(false); setEditMsg(null); }}>Cancel</button>
-                <button className="btn-primary" onClick={handleSave}>{editMsg ? 'Update' : 'Send'}</button>
+                <button className="btn-primary" disabled={!form.creator_id} onClick={handleSave}>{editMsg ? 'Update' : 'Send'}</button>
               </div>
             </div>
           </div>

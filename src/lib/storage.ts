@@ -442,6 +442,9 @@ export async function createApp(data: Partial<App>): Promise<App> {
     id: uuidv4(),
     name: data.name || '',
     description: data.description || '',
+    website: data.website || '',
+    play_store: data.play_store || '',
+    app_store: data.app_store || '',
     created_at: new Date().toISOString(),
   };
 

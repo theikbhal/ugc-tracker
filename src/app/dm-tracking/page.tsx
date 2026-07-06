@@ -25,6 +25,9 @@ export default function DMTrackingPage() {
   const [editMsg, setEditMsg] = useState<DMMessage | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showBulkGenerate, setShowBulkGenerate] = useState(false);
+  const [bulkTemplateId, setBulkTemplateId] = useState('');
+  const [bulkCreatorIds, setBulkCreatorIds] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     creator_id: '',
@@ -145,6 +148,27 @@ export default function DMTrackingPage() {
     setShowCreatorDropdown(false);
   };
 
+  const handleBulkGenerate = async () => {
+    const template = templates.find(t => t.id === bulkTemplateId);
+    if (!template) return;
+    const now = new Date().toISOString();
+    for (const cid of bulkCreatorIds) {
+      const creator = creators.find(c => c.id === cid);
+      if (!creator) continue;
+      const msg = replacePlaceholders(template.message, creator);
+      await createDMMessage({
+        creator_id: cid,
+        message: msg,
+        sent_at: now,
+        status: 'prepared',
+      });
+    }
+    setBulkCreatorIds([]);
+    setBulkTemplateId('');
+    setShowBulkGenerate(false);
+    load();
+  };
+
   const getCreatorName = (id: string) => {
     const c = creators.find(cr => cr.id === id);
     return c ? (c.name || c.instagram_id || id.slice(0, 8)) : id.slice(0, 8);
@@ -157,6 +181,7 @@ export default function DMTrackingPage() {
   };
 
   const statusColors: Record<string, string> = {
+    prepared: 'bg-gray-100 text-gray-800',
     sent: 'bg-blue-100 text-blue-800',
     delivered: 'bg-yellow-100 text-yellow-800',
     read: 'bg-purple-100 text-purple-800',
@@ -172,6 +197,7 @@ export default function DMTrackingPage() {
         </div>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <a href="/templates" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>Templates</a>
+          <button className="btn-secondary btn-sm" onClick={() => { setBulkCreatorIds(creators.map(c => c.id)); setShowBulkGenerate(true); }}>Bulk Generate ({creators.length})</button>
           <button className="btn-primary btn-sm" onClick={() => { resetForm(); setEditMsg(null); setShowAdd(true); }}>+ New DM</button>
           <button className="btn-secondary btn-sm" onClick={() => exportToJSON(filtered, 'dm-messages')}>JSON</button>
           <button className="btn-secondary btn-sm" onClick={() => exportToCSV(filtered, 'dm-messages')}>CSV</button>
@@ -185,6 +211,7 @@ export default function DMTrackingPage() {
         </select>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ width: 'auto', minWidth: '120px' }}>
           <option value="">All Status</option>
+          <option value="prepared">Prepared</option>
           <option value="sent">Sent</option>
           <option value="delivered">Delivered</option>
           <option value="read">Read</option>
@@ -331,6 +358,7 @@ export default function DMTrackingPage() {
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Status</label>
                 <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as DMMessage['status'] }))}>
+                  <option value="prepared">Prepared</option>
                   <option value="sent">Sent</option>
                   <option value="delivered">Delivered</option>
                   <option value="read">Read</option>
@@ -355,6 +383,62 @@ export default function DMTrackingPage() {
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                 <button className="btn-secondary" onClick={() => { setShowAdd(false); setEditMsg(null); }}>Cancel</button>
                 <button className="btn-primary" disabled={!form.creator_id} onClick={handleSave}>{editMsg ? 'Update' : 'Send'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkGenerate && (
+        <div className="modal-overlay" onClick={() => setShowBulkGenerate(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Bulk Generate DMs</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Select Template</label>
+                <select value={bulkTemplateId} onChange={e => setBulkTemplateId(e.target.value)}>
+                  <option value="">Choose a template...</option>
+                  {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Creators ({bulkCreatorIds.length})</label>
+                <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px' }}>
+                  {creators.map(c => (
+                    <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '13px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={bulkCreatorIds.includes(c.id)}
+                        onChange={e => {
+                          setBulkCreatorIds(prev =>
+                            e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id)
+                          );
+                        }}
+                      />
+                      <span style={{ fontWeight: '500' }}>{c.instagram_id}</span>
+                      {c.name && <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{c.name}</span>}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {bulkTemplateId && bulkCreatorIds.length > 0 && (
+                <div style={{ padding: '10px', background: 'var(--pastel-blue)', borderRadius: '8px', fontSize: '12px' }}>
+                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>Preview (first creator):</div>
+                  <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
+                    {(() => {
+                      const tmpl = templates.find(t => t.id === bulkTemplateId);
+                      const cr = creators.find(c => c.id === bulkCreatorIds[0]);
+                      if (!tmpl || !cr) return '';
+                      return replacePlaceholders(tmpl.message, cr);
+                    })()}
+                  </p>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button className="btn-secondary" onClick={() => setShowBulkGenerate(false)}>Cancel</button>
+                <button className="btn-primary" disabled={!bulkTemplateId || bulkCreatorIds.length === 0} onClick={handleBulkGenerate}>
+                  Generate {bulkCreatorIds.length} DMs
+                </button>
               </div>
             </div>
           </div>

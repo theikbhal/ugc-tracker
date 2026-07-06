@@ -22,13 +22,16 @@ export interface DMMessage {
   responded: boolean;
   responded_at: string | null;
   response_text: string | null;
-  status: 'sent' | 'delivered' | 'read' | 'responded';
+  status: 'sent' | 'delivered' | 'read' | 'responded' | 'prepared';
 }
 
 export interface App {
   id: string;
   name: string;
   description: string;
+  website: string;
+  play_store: string;
+  app_store: string;
   created_at: string;
 }
 

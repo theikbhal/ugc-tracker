@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { UGCCreator, DMMessage, App, Settings, DEFAULT_SETTINGS } from './types';
+import { UGCCreator, DMMessage, App, Settings, DEFAULT_SETTINGS, DMTemplate } from './types';
 import { getSupabaseClient } from './supabase';
 
 function getSettings(): Settings {
@@ -237,6 +237,84 @@ export async function bulkAddAppToCreators(creatorIds: string[], appName: string
     });
     localStorage.setItem('ugc_creators', JSON.stringify(updated));
   }
+}
+
+// ============ DM TEMPLATES ============
+
+export async function getDMTemplates(): Promise<DMTemplate[]> {
+  if (isSupabaseEnabled()) {
+    const client = getSupabaseClient();
+    if (client) {
+      const { data, error } = await client.from('dm_templates').select('*').order('name');
+      if (!error && data) return data;
+    }
+  }
+  if (isLocalStorageEnabled()) {
+    try {
+      const stored = localStorage.getItem('ugc_dm_templates');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  }
+  return [];
+}
+
+export async function createDMTemplate(data: Partial<DMTemplate>): Promise<DMTemplate> {
+  const tmpl: DMTemplate = {
+    id: uuidv4(),
+    name: data.name || '',
+    message: data.message || '',
+    created_at: new Date().toISOString(),
+  };
+  if (isSupabaseEnabled()) {
+    const client = getSupabaseClient();
+    if (client) {
+      const { data: inserted, error } = await client.from('dm_templates').insert(tmpl).select().single();
+      if (!error && inserted) return inserted;
+    }
+  }
+  if (isLocalStorageEnabled()) {
+    const list = await getDMTemplates();
+    list.push(tmpl);
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    localStorage.setItem('ugc_dm_templates', JSON.stringify(list));
+  }
+  return tmpl;
+}
+
+export async function updateDMTemplate(id: string, data: Partial<DMTemplate>): Promise<DMTemplate | null> {
+  if (isSupabaseEnabled()) {
+    const client = getSupabaseClient();
+    if (client) {
+      const { data: updated, error } = await client.from('dm_templates').update(data).eq('id', id).select().single();
+      if (!error && updated) return updated;
+    }
+  }
+  if (isLocalStorageEnabled()) {
+    const list = await getDMTemplates();
+    const idx = list.findIndex(t => t.id === id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...data };
+      localStorage.setItem('ugc_dm_templates', JSON.stringify(list));
+      return list[idx];
+    }
+  }
+  return null;
+}
+
+export async function deleteDMTemplate(id: string): Promise<boolean> {
+  if (isSupabaseEnabled()) {
+    const client = getSupabaseClient();
+    if (client) {
+      const { error } = await client.from('dm_templates').delete().eq('id', id);
+      if (!error) return true;
+    }
+  }
+  if (isLocalStorageEnabled()) {
+    const list = await getDMTemplates();
+    localStorage.setItem('ugc_dm_templates', JSON.stringify(list.filter(t => t.id !== id)));
+    return true;
+  }
+  return false;
 }
 
 // ============ DM MESSAGES ============

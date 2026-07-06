@@ -48,6 +48,21 @@ export const DEFAULT_SETTINGS: Settings = {
   page_size: 20,
 };
 
+export interface DMTemplate {
+  id: string;
+  name: string;
+  message: string;
+  created_at: string;
+}
+
+export const DM_TEMPLATE_PLACEHOLDERS = [
+  { key: '{{instagram_id}}', desc: 'Instagram username' },
+  { key: '{{name}}', desc: 'Creator name' },
+  { key: '{{followers}}', desc: 'Follower count' },
+  { key: '{{posts}}', desc: 'Post count' },
+  { key: '{{app}}', desc: 'First app in list' },
+] as const;
+
 export const STATUS_OPTIONS = [
   { value: 'new', label: 'New', color: 'bg-blue-100 text-blue-800' },
   { value: 'contacted', label: 'Contacted', color: 'bg-yellow-100 text-yellow-800' },

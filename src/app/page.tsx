@@ -4,6 +4,7 @@ export default function Home() {
       <nav style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
         <a href="/creators" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-block' }}>Creators</a>
         <a href="/dm-tracking" className="btn-secondary" style={{ textDecoration: 'none', display: 'inline-block' }}>DM Tracking</a>
+        <a href="/templates" className="btn-secondary" style={{ textDecoration: 'none', display: 'inline-block' }}>Templates</a>
         <a href="/apps" className="btn-secondary" style={{ textDecoration: 'none', display: 'inline-block' }}>Apps</a>
         <a href="/settings" className="btn-secondary" style={{ textDecoration: 'none', display: 'inline-block' }}>Settings</a>
       </nav>
@@ -17,6 +18,10 @@ export default function Home() {
         <a href="/dm-tracking" className="card" style={{ textDecoration: 'none', color: 'var(--text)', textAlign: 'center' }}>
           <div style={{ fontSize: '28px', fontWeight: '700' }}>💬</div>
           <div style={{ fontSize: '14px', marginTop: '4px' }}>DM Tracking</div>
+        </a>
+        <a href="/templates" className="card" style={{ textDecoration: 'none', color: 'var(--text)', textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', fontWeight: '700' }}>📝</div>
+          <div style={{ fontSize: '14px', marginTop: '4px' }}>Templates</div>
         </a>
         <a href="/apps" className="card" style={{ textDecoration: 'none', color: 'var(--text)', textAlign: 'center' }}>
           <div style={{ fontSize: '28px', fontWeight: '700' }}>📱</div>

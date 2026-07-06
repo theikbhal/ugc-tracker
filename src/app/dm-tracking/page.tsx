@@ -1,13 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { DMMessage, UGCCreator } from '@/lib/types';
-import { getDMMessages, createDMMessage, updateDMMessage, deleteDMMessage, getCreators } from '@/lib/storage';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { DMMessage, UGCCreator, DMTemplate } from '@/lib/types';
+import { getDMMessages, createDMMessage, updateDMMessage, deleteDMMessage, getCreators, getDMTemplates } from '@/lib/storage';
 import { exportToJSON, exportToCSV } from '@/lib/export';
+
+function replacePlaceholders(template: string, creator: UGCCreator): string {
+  return template
+    .replace(/\{\{instagram_id\}\}/g, creator.instagram_id || '')
+    .replace(/\{\{name\}\}/g, creator.name || '')
+    .replace(/\{\{followers\}\}/g, creator.followers?.toLocaleString() || '0')
+    .replace(/\{\{posts\}\}/g, creator.posts?.toLocaleString() || '0')
+    .replace(/\{\{app\}\}/g, creator.apps?.[0] || '')
+    .replace(/\{\{instagram_link\}\}/g, creator.instagram_link || '');
+}
 
 export default function DMTrackingPage() {
   const [messages, setMessages] = useState<DMMessage[]>([]);
   const [creators, setCreators] = useState<UGCCreator[]>([]);
+  const [templates, setTemplates] = useState<DMTemplate[]>([]);
   const [creatorFilter, setCreatorFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showAdd, setShowAdd] = useState(false);
@@ -16,6 +27,7 @@ export default function DMTrackingPage() {
 
   const [form, setForm] = useState({
     creator_id: '',
+    template_id: '',
     message: '',
     sent_at: new Date().toISOString().slice(0, 16),
     responded: false,
@@ -25,13 +37,22 @@ export default function DMTrackingPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [m, c] = await Promise.all([getDMMessages(), getCreators()]);
+    const [m, c, t] = await Promise.all([getDMMessages(), getCreators(), getDMTemplates()]);
     setMessages(m);
     setCreators(c);
+    setTemplates(t);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const selectedCreator = useMemo(() => creators.find(c => c.id === form.creator_id), [creators, form.creator_id]);
+  const selectedTemplate = useMemo(() => templates.find(t => t.id === form.template_id), [templates, form.template_id]);
+
+  const previewMessage = useMemo(() => {
+    if (!selectedCreator || !selectedTemplate) return form.message;
+    return replacePlaceholders(selectedTemplate.message, selectedCreator);
+  }, [selectedCreator, selectedTemplate, form.message]);
 
   const filtered = messages.filter(m => {
     if (creatorFilter && m.creator_id !== creatorFilter) return false;
@@ -40,10 +61,17 @@ export default function DMTrackingPage() {
   });
 
   const handleSave = async () => {
+    const msg = selectedTemplate && selectedCreator
+      ? replacePlaceholders(selectedTemplate.message, selectedCreator)
+      : form.message;
     const data = {
-      ...form,
+      creator_id: form.creator_id,
+      message: msg,
       sent_at: new Date(form.sent_at).toISOString(),
+      responded: form.responded,
       responded_at: form.responded ? new Date().toISOString() : null,
+      response_text: form.response_text || null,
+      status: form.status,
     };
     if (editMsg) {
       await updateDMMessage(editMsg.id, data);
@@ -64,12 +92,13 @@ export default function DMTrackingPage() {
   };
 
   const resetForm = () => {
-    setForm({ creator_id: '', message: '', sent_at: new Date().toISOString().slice(0, 16), responded: false, response_text: '', status: 'sent' });
+    setForm({ creator_id: '', template_id: '', message: '', sent_at: new Date().toISOString().slice(0, 16), responded: false, response_text: '', status: 'sent' });
   };
 
   const openEdit = (m: DMMessage) => {
     setForm({
       creator_id: m.creator_id,
+      template_id: '',
       message: m.message,
       sent_at: m.sent_at.slice(0, 16),
       responded: m.responded,
@@ -100,6 +129,7 @@ export default function DMTrackingPage() {
           <h1 style={{ fontSize: '20px', fontWeight: '700' }}>DM Tracking ({filtered.length})</h1>
         </div>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <a href="/templates" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>Templates</a>
           <button className="btn-primary btn-sm" onClick={() => { resetForm(); setEditMsg(null); setShowAdd(true); }}>+ New DM</button>
           <button className="btn-secondary btn-sm" onClick={() => exportToJSON(filtered, 'dm-messages')}>JSON</button>
           <button className="btn-secondary btn-sm" onClick={() => exportToCSV(filtered, 'dm-messages')}>CSV</button>
@@ -135,9 +165,10 @@ export default function DMTrackingPage() {
                     <span className={`badge ${statusColors[m.status] || ''}`}>{m.status}</span>
                     {m.responded && <span className="badge bg-green-100 text-green-800">Responded</span>}
                   </div>
-                  <p style={{ fontSize: '13px', color: 'var(--text)', marginBottom: '4px', lineHeight: '1.4' }}>{m.message}</p>
+                  <p style={{ fontSize: '13px', color: 'var(--text)', marginBottom: '4px', lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>{m.message}</p>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    Sent: {new Date(m.sent_at).toLocaleString()}
+                    Sent: {new Date(m.sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {' '}{new Date(m.sent_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                     {m.responded_at && <> · Responded: {new Date(m.responded_at).toLocaleString()}</>}
                   </div>
                   {m.response_text && (
@@ -168,14 +199,34 @@ export default function DMTrackingPage() {
                   {creators.map(c => <option key={c.id} value={c.id}>{c.name || c.instagram_id}</option>)}
                 </select>
               </div>
+
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Message</label>
-                <textarea rows={4} placeholder="DM message content..." value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} />
+                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Use Template (optional)</label>
+                <select value={form.template_id} onChange={e => setForm(f => ({ ...f, template_id: e.target.value }))}>
+                  <option value="">Write custom message</option>
+                  {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
               </div>
+
+              {selectedTemplate && selectedCreator && (
+                <div style={{ padding: '10px', background: 'var(--pastel-blue)', borderRadius: '8px', fontSize: '12px' }}>
+                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>Preview:</div>
+                  <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>{previewMessage}</p>
+                </div>
+              )}
+
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Sent At</label>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                  {selectedTemplate ? 'Message (auto-filled from template)' : 'Message'}
+                </label>
+                <textarea rows={5} placeholder="DM message content..." value={selectedTemplate && selectedCreator ? previewMessage : form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} readOnly={!!selectedTemplate && !!selectedCreator} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Sent Date & Time (editable)</label>
                 <input type="datetime-local" value={form.sent_at} onChange={e => setForm(f => ({ ...f, sent_at: e.target.value }))} />
               </div>
+
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Status</label>
                 <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as DMMessage['status'] }))}>
@@ -185,18 +236,21 @@ export default function DMTrackingPage() {
                   <option value="responded">Responded</option>
                 </select>
               </div>
+
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                   <input type="checkbox" checked={form.responded} onChange={e => setForm(f => ({ ...f, responded: e.target.checked }))} />
                   Responded
                 </label>
               </div>
+
               {form.responded && (
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Response Text</label>
                   <textarea rows={2} placeholder="What they replied..." value={form.response_text} onChange={e => setForm(f => ({ ...f, response_text: e.target.value }))} />
                 </div>
               )}
+
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                 <button className="btn-secondary" onClick={() => { setShowAdd(false); setEditMsg(null); }}>Cancel</button>
                 <button className="btn-primary" onClick={handleSave}>{editMsg ? 'Update' : 'Send'}</button>

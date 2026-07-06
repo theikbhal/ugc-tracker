@@ -35,6 +35,13 @@ CREATE TABLE IF NOT EXISTS apps (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS dm_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL DEFAULT '',
+  message TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_creators_status ON creators(status);
 CREATE INDEX IF NOT EXISTS idx_creators_instagram_id ON creators(instagram_id);
@@ -45,8 +52,10 @@ CREATE INDEX IF NOT EXISTS idx_dm_messages_sent_at ON dm_messages(sent_at);
 ALTER TABLE creators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dm_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE apps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dm_templates ENABLE ROW LEVEL SECURITY;
 
 -- Allow all operations for anon key (adjust as needed)
 CREATE POLICY "Allow all on creators" ON creators FOR ALL USING (true);
 CREATE POLICY "Allow all on dm_messages" ON dm_messages FOR ALL USING (true);
 CREATE POLICY "Allow all on apps" ON apps FOR ALL USING (true);
+CREATE POLICY "Allow all on dm_templates" ON dm_templates FOR ALL USING (true);

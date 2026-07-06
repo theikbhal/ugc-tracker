@@ -395,15 +395,15 @@ export default function CreatorsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Followers</label>
-                  <input type="number" value={form.followers} onChange={e => setForm(f => ({ ...f, followers: Number(e.target.value) }))} />
+                  <input type="number" min="0" value={form.followers || ''} onChange={e => setForm(f => ({ ...f, followers: Number(e.target.value) }))} style={{ padding: '10px 12px', fontSize: '16px', fontWeight: '600', textAlign: 'center' }} />
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Following</label>
-                  <input type="number" value={form.following} onChange={e => setForm(f => ({ ...f, following: Number(e.target.value) }))} />
+                  <input type="number" min="0" value={form.following || ''} onChange={e => setForm(f => ({ ...f, following: Number(e.target.value) }))} style={{ padding: '10px 12px', fontSize: '16px', fontWeight: '600', textAlign: 'center' }} />
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Posts</label>
-                  <input type="number" value={form.posts} onChange={e => setForm(f => ({ ...f, posts: Number(e.target.value) }))} />
+                  <input type="number" min="0" value={form.posts || ''} onChange={e => setForm(f => ({ ...f, posts: Number(e.target.value) }))} style={{ padding: '10px 12px', fontSize: '16px', fontWeight: '600', textAlign: 'center' }} />
                 </div>
               </div>
               <div>

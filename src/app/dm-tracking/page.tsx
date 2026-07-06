@@ -274,7 +274,12 @@ export default function DMTrackingPage() {
                       <span style={{ fontWeight: '600' }}>{selectedCreator.instagram_id}</span>
                       {selectedCreator.name && <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>{selectedCreator.name}</span>}
                     </div>
-                    <button className="btn-secondary btn-sm" onClick={() => { setForm(f => ({ ...f, creator_id: '' })); setCreatorSearch(''); }}>Change</button>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {selectedCreator.instagram_link && (
+                        <a href={selectedCreator.instagram_link} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>Instagram</a>
+                      )}
+                      <button className="btn-secondary btn-sm" onClick={() => { setForm(f => ({ ...f, creator_id: '' })); setCreatorSearch(''); }}>Change</button>
+                    </div>
                   </div>
                   <div style={{ marginTop: '4px', color: 'var(--text-muted)' }}>
                     {selectedCreator.followers.toLocaleString()} followers · {selectedCreator.posts.toLocaleString()} posts · {selectedCreator.following.toLocaleString()} following

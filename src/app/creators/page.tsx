@@ -81,16 +81,20 @@ export default function CreatorsPage() {
     }
   };
 
+  const extractInstagramId = (input: string): string => {
+    const trimmed = input.trim();
+    const urlMatch = trimmed.match(/instagram\.com\/([a-zA-Z0-9._]+)\/?/);
+    if (urlMatch) return urlMatch[1];
+    if (trimmed.startsWith('@')) return trimmed.slice(1);
+    return trimmed;
+  };
+
   const handleBulkAdd = async () => {
     const lines = bulkText.trim().split('\n').filter(Boolean);
     const newCreators = lines.map(line => {
-      const parts = line.split(',').map(s => s.trim());
-      return {
-        instagram_id: parts[0] || '',
-        instagram_link: parts[1] || '',
-        name: parts[2] || '',
-        notes: parts[3] || '',
-      };
+      const instagram_id = extractInstagramId(line);
+      const instagram_link = instagram_id ? `https://www.instagram.com/${instagram_id}/` : '';
+      return { instagram_id, instagram_link, name: '', notes: '' };
     });
     await bulkAddCreators(newCreators);
     setBulkText('');
@@ -251,7 +255,11 @@ export default function CreatorsPage() {
               </div>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Instagram Link</label>
-                <input placeholder="https://instagram.com/username" value={form.instagram_link} onChange={e => setForm(f => ({ ...f, instagram_link: e.target.value }))} />
+                <input placeholder="https://instagram.com/username" value={form.instagram_link} onChange={e => {
+                  const link = e.target.value;
+                  const id = extractInstagramId(link);
+                  setForm(f => ({ ...f, instagram_link: link, instagram_id: id || f.instagram_id }));
+                }} />
               </div>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Name</label>
@@ -314,8 +322,8 @@ export default function CreatorsPage() {
         <div className="modal-overlay" onClick={() => setShowBulkAdd(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Bulk Add Creators</h2>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>One per line: instagram_id, instagram_link, name, notes</p>
-            <textarea rows={8} placeholder="user1, https://instagram.com/user1, User One, notes&#10;user2, https://instagram.com/user2, User Two, notes" value={bulkText} onChange={e => setBulkText(e.target.value)} />
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>One per line — instagram handle, @handle, or full URL. Links auto-generated.</p>
+            <textarea rows={8} placeholder="earlyalarm&#10;@somecreator&#10;https://www.instagram.com/anothercreator/" value={bulkText} onChange={e => setBulkText(e.target.value)} />
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
               <button className="btn-secondary" onClick={() => setShowBulkAdd(false)}>Cancel</button>
               <button className="btn-primary" onClick={handleBulkAdd}>Add All</button>

@@ -330,10 +330,15 @@ export default function DMTrackingPage() {
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Use Template (optional)</label>
-                <select value={form.template_id} onChange={e => setForm(f => ({ ...f, template_id: e.target.value }))}>
-                  <option value="">Write custom message</option>
-                  {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <select value={form.template_id} onChange={e => setForm(f => ({ ...f, template_id: e.target.value }))} style={{ flex: 1 }}>
+                    <option value="">Write custom message</option>
+                    {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                  {selectedTemplate && selectedCreator && (
+                    <button className="btn-secondary btn-sm" onClick={() => setForm(f => ({ ...f }))} title="Refresh preview">Refresh</button>
+                  )}
+                </div>
               </div>
 
               {selectedTemplate && selectedCreator && (
@@ -345,9 +350,16 @@ export default function DMTrackingPage() {
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
-                  {selectedTemplate ? 'Message (auto-filled from template)' : 'Message'}
+                  {selectedTemplate ? 'Message (auto-filled from template)' : 'Message'} <span style={{ fontWeight: '400', fontSize: '10px' }}>(Ctrl+Enter to save)</span>
                 </label>
-                <textarea rows={5} placeholder="DM message content..." value={selectedTemplate && selectedCreator ? previewMessage : form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} readOnly={!!selectedTemplate && !!selectedCreator} />
+                <textarea
+                  rows={5}
+                  placeholder="DM message content..."
+                  value={selectedTemplate && selectedCreator ? previewMessage : form.message}
+                  onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+                  onKeyDown={e => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); handleSave(); } }}
+                  readOnly={!!selectedTemplate && !!selectedCreator}
+                />
               </div>
 
               <div>
@@ -380,7 +392,8 @@ export default function DMTrackingPage() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Ctrl+Enter</span>
                 <button className="btn-secondary" onClick={() => { setShowAdd(false); setEditMsg(null); }}>Cancel</button>
                 <button className="btn-primary" disabled={!form.creator_id} onClick={handleSave}>{editMsg ? 'Update' : 'Send'}</button>
               </div>

@@ -220,9 +220,18 @@ export default function DMTrackingPage() {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                  <button className="btn-secondary btn-sm" onClick={() => copyMessage(m.message, m.id)}>
-                    {copiedId === m.id ? 'Copied!' : 'Copy'}
-                  </button>
+                  {(() => {
+                    const creator = creators.find(c => c.id === m.creator_id);
+                    return creator?.instagram_link ? (
+                      <button className="btn-primary btn-sm" onClick={() => { navigator.clipboard.writeText(m.message); window.open(creator.instagram_link, '_blank'); }}>
+                        {copiedId === m.id ? 'Copied!' : 'Copy & Open IG'}
+                      </button>
+                    ) : (
+                      <button className="btn-secondary btn-sm" onClick={() => copyMessage(m.message, m.id)}>
+                        {copiedId === m.id ? 'Copied!' : 'Copy'}
+                      </button>
+                    );
+                  })()}
                   <button className="btn-secondary btn-sm" onClick={() => openEdit(m)}>Edit</button>
                   <button className="btn-danger btn-sm" onClick={() => handleDelete(m.id)}>Del</button>
                 </div>
